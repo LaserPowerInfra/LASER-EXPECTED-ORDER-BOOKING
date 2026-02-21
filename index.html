@@ -1,0 +1,81 @@
+const SPREADSHEET_ID = "1jxRKamvS4Az7Gj2bdV4McT8dpQ0dBDapXt-P3c8Gaew";
+
+function doGet(e) {
+  try {
+    if (e && e.parameter && e.parameter.action === "getCoilList") {
+      const data = getCoilList();
+      return jsonResponse({ result: "success", data: data });
+    }
+    return jsonResponse({ result: "ok", message: "App is running" });
+  } catch (err) {
+    return jsonResponse({ result: "error", message: err.message });
+  }
+}
+
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents || "{}");
+
+    if (!checkIfEmailAllowed(data.userEmail)) {
+      return jsonResponse({ result: "error", message: "Access Denied" });
+    }
+
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = ss.getSheetByName("Responce"); 
+    if (!sheet) {
+      return jsonResponse({ result: "error", message: "Sheet not found" });
+    }
+
+    const systemTimestamp = Utilities.formatDate(new Date(), "GMT+5:30", "dd/MM/yyyy HH:mm:ss");
+
+    sheet.appendRow([
+      systemTimestamp,
+      data.quotation_no,
+      data.slno,
+      data.grid_id,
+      data.akshat_sir_approval
+    ]);
+
+    return jsonResponse({ result: "success" });
+
+  } catch (err) {
+    return jsonResponse({ result: "error", message: err.message });
+  }
+}
+
+function getCoilList() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName("Not Approved Data");
+  if (!sheet) return [];
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+  
+  const values = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
+  const result = [];
+  
+  for (let i = 0; i < values.length; i++) {
+    if (values[i][0]) {
+      result.push({
+        quotation_no: values[i][0],
+        slno: values[i][1],
+        grid_id: values[i][2]
+      });
+    }
+  }
+  return result;
+}
+
+function checkIfEmailAllowed(email) {
+  if (!email) return false;
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName("mail id");
+  if (!sheet) return false;
+  const list = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues().flat();
+  return list.map(e => e.toLowerCase().trim()).includes(email.toLowerCase().trim());
+}
+
+function jsonResponse(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
