@@ -92,17 +92,16 @@ input[readonly] {
 .combo-list div:hover{background:#e9ecef}
 
 /* BUTTONS */
-.btn-group { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+.btn-group { grid-column: 1 / -1; margin-top: 20px; }
 button.submit-btn { padding: 12px; color: #fff; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.2); transition: background 0.2s;}
 .btn-exit { background: #546e7a; } .btn-exit:hover { background: #455a64; }
-.btn-keep { background: #0d6efd; } .btn-keep:hover { background: #0b5ed7; }
 
 .logout-container { text-align: center; margin-top: 15px; }
 .logout-btn{border:1px solid #dc3545;color:#dc3545;padding:6px 15px;border-radius:4px;background:rgba(255,255,255,0.9);cursor:pointer; font-size: 13px; font-weight: bold;}
 .logout-btn:hover { background: #dc3545; color: white; }
 
 /* Mobile Responsive */
-@media(max-width:600px){ .form-grid{grid-template-columns:1fr} .btn-group { grid-template-columns: 1fr; gap: 10px; } }
+@media(max-width:600px){ .form-grid{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
@@ -146,17 +145,15 @@ button.submit-btn { padding: 12px; color: #fff; border: none; border-radius: 6px
     <div><label class="req">GRID ID (Auto)</label><input type="text" id="gridIdInput" name="grid_id" readonly required></div>
 
     <div>
-        <label class="req">Akshat Sir Approval</label>
+        <label class="req">AKSHAT SIR APPROVAL</label>
         <select name="akshat_sir_approval" required>
             <option value="" disabled selected hidden>Select Approval Status</option>
-            <option value="Approved">Approved</option>
-            <option value="Pending">Pending</option>
+            <option value="APPROVED">APPROVED</option>
         </select>
     </div>
 
     <div class="btn-group">
         <button type="button" class="submit-btn btn-exit" id="btnSubmitExit">Submit & Exit</button>
-        <button type="button" class="submit-btn btn-keep" id="btnSubmitKeep">Submit & Keep Data</button>
     </div>
 
   </form>
@@ -196,7 +193,6 @@ document.getElementById("logoutBtn").addEventListener("click", () => {
 });
 
 document.getElementById("btnSubmitExit").addEventListener("click", () => handleFormSubmit(true));
-document.getElementById("btnSubmitKeep").addEventListener("click", () => handleFormSubmit(false));
 
 const loginSection=document.getElementById("loginSection");
 const formSection=document.getElementById("formSection");
@@ -240,23 +236,20 @@ function loadQuotationList(){
 }
 
 function populateSlnoDropdown(selectedQno) {
-    // Setting disabled and hidden placeholder for SL NO
     slnoInput.innerHTML = '<option value="" disabled selected hidden>Select SL NO</option>';
     gridIdInput.value = "";
     
-    // Filter matching data
     const matches = quotationData.filter(item => String(item.quotation_no).trim().toLowerCase() === selectedQno.toLowerCase());
     
     matches.forEach(m => {
         const opt = document.createElement("option");
         opt.value = m.slno;
         opt.textContent = m.slno;
-        opt.dataset.grid = m.grid_id; // Store grid_id inside option
+        opt.dataset.grid = m.grid_id; 
         slnoInput.appendChild(opt);
     });
 }
 
-// SL NO Dropdown Change listener to auto-fill GRID ID
 slnoInput.addEventListener("change", (e) => {
     const selectedOption = e.target.options[e.target.selectedIndex];
     gridIdInput.value = selectedOption.dataset.grid || "";
@@ -268,7 +261,6 @@ function showList(val = "") {
   const valLower = val.toLowerCase();
   let count = 0; 
   
-  // Extract unique quotations
   const uniqueQuotations = [...new Set(quotationData.map(item => String(item.quotation_no).trim()))];
 
   for (let i = 0; i < uniqueQuotations.length; i++) {
@@ -280,7 +272,7 @@ function showList(val = "") {
         d.onmousedown = () => { 
             quotationInput.value = qNo;
             quotationList.style.display = "none";
-            populateSlnoDropdown(qNo); // Populate SL NO on select
+            populateSlnoDropdown(qNo); 
         };
         fragment.appendChild(d);
         count++;
@@ -309,7 +301,6 @@ quotationInput.addEventListener("blur", () => { setTimeout(() => { quotationList
 
 const entryForm = document.getElementById("entryForm");
 const btnSubmitExit = document.getElementById("btnSubmitExit");
-const btnSubmitKeep = document.getElementById("btnSubmitKeep");
 
 const Toast = Swal.mixin({
   toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, timerProgressBar: true,
@@ -331,10 +322,10 @@ const handleFormSubmit = function(clearForm) {
 
   if (lastSubmittedJSON === currentJSON) { Swal.fire({ icon: 'warning', title: 'Duplicate Entry', text: 'Change at least one field before submitting again.', confirmButtonColor: '#d33' }); return; }
   
-  btnSubmitExit.disabled = true; btnSubmitKeep.disabled = true;
-  const originalTextExit = btnSubmitExit.innerText; const originalTextKeep = btnSubmitKeep.innerText;
+  btnSubmitExit.disabled = true; 
+  const originalTextExit = btnSubmitExit.innerText; 
   
-  if(clearForm) btnSubmitExit.innerText = "Saving..."; else btnSubmitKeep.innerText = "Saving...";
+  btnSubmitExit.innerText = "Saving...";
 
   fetch(SCRIPT_URL,{ method:"POST", body:JSON.stringify(obj) })
     .then(r=>r.json())
@@ -345,12 +336,12 @@ const handleFormSubmit = function(clearForm) {
         if (clearForm) {
             entryForm.reset(); lastSubmittedJSON = ""; 
             if(auth.currentUser){ document.getElementById("userEmail").value = auth.currentUser.email; document.getElementById("testedBy").value = auth.currentUser.displayName; }
-            slnoInput.innerHTML = '<option value="" disabled selected hidden>Select Quotation First</option>'; // Reset dropdown
+            slnoInput.innerHTML = '<option value="" disabled selected hidden>Select Quotation First</option>'; 
         }
       }else{ throw new Error(res.message); }
     })
     .catch(err=>Swal.fire("Error", "Failed: " + err, "error"))
-    .finally(()=>{ btnSubmitExit.disabled = false; btnSubmitKeep.disabled = false; btnSubmitExit.innerText = originalTextExit; btnSubmitKeep.innerText = originalTextKeep; });
+    .finally(()=>{ btnSubmitExit.disabled = false; btnSubmitExit.innerText = originalTextExit; });
 };
 </script>
 
