@@ -68,13 +68,17 @@ input, select {
 }
 input:focus, select:focus { border-color: #0d6efd; outline: none; background: #fff; box-shadow: 0 0 5px rgba(13, 110, 253, 0.3); }
 
+/* Placeholder text color for select */
+select:invalid { color: #666; }
+select option { color: #000; }
+
 /* READONLY FIELDS */
 input[readonly] {
     background-color: #fffde7; color: #000; font-weight: 800; border: 1px solid #fbc02d; cursor: default; opacity: 1;           
 }
 
 /* Custom Searchable Dropdown Style */
-.combo { position: relative; }
+.combo { position: relative; width: 100%; }
 .combo::after {
     content: ''; position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
     border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid #666; pointer-events: none;
@@ -124,22 +128,31 @@ button.submit-btn { padding: 12px; color: #fff; border: none; border-radius: 6px
     <input type="hidden" id="userEmail" name="userEmail">
     <input type="hidden" id="testedBy" name="testedBy">
     
-    <div class="combo" id="comboWrapper">
+    <div>
         <label class="req">QUOTATION NO</label>
-        <input id="quotationInput" name="quotation_no" placeholder="Select or type quotation..." autocomplete="off" required>
-        <div id="quotationList" class="combo-list"></div>
+        <div class="combo" id="comboWrapper">
+            <input id="quotationInput" name="quotation_no" placeholder="Select or type quotation..." autocomplete="off" required>
+            <div id="quotationList" class="combo-list"></div>
+        </div>
     </div>
 
     <div>
         <label class="req">SL NO</label>
         <select id="slnoInput" name="slno" required>
-            <option value="">Select Quotation First</option>
+            <option value="" disabled selected hidden>Select Quotation First</option>
         </select>
     </div>
     
     <div><label class="req">GRID ID (Auto)</label><input type="text" id="gridIdInput" name="grid_id" readonly required></div>
 
-    <div><label class="req">Akshat Sir Approval</label><select name="akshat_sir_approval" required><option value="">Select</option><option>Approved</option><option>Pending</option></select></div>
+    <div>
+        <label class="req">Akshat Sir Approval</label>
+        <select name="akshat_sir_approval" required>
+            <option value="" disabled selected hidden>Select Approval Status</option>
+            <option value="Approved">Approved</option>
+            <option value="Pending">Pending</option>
+        </select>
+    </div>
 
     <div class="btn-group">
         <button type="button" class="submit-btn btn-exit" id="btnSubmitExit">Submit & Exit</button>
@@ -227,7 +240,8 @@ function loadQuotationList(){
 }
 
 function populateSlnoDropdown(selectedQno) {
-    slnoInput.innerHTML = '<option value="">Select SL NO</option>';
+    // Setting disabled and hidden placeholder for SL NO
+    slnoInput.innerHTML = '<option value="" disabled selected hidden>Select SL NO</option>';
     gridIdInput.value = "";
     
     // Filter matching data
@@ -277,7 +291,7 @@ function showList(val = "") {
 
 quotationInput.addEventListener("input", () => {
     showList(quotationInput.value);
-    slnoInput.innerHTML = '<option value="">Select Quotation First</option>';
+    slnoInput.innerHTML = '<option value="" disabled selected hidden>Select Quotation First</option>';
     gridIdInput.value = ""; 
 });
 
@@ -331,7 +345,7 @@ const handleFormSubmit = function(clearForm) {
         if (clearForm) {
             entryForm.reset(); lastSubmittedJSON = ""; 
             if(auth.currentUser){ document.getElementById("userEmail").value = auth.currentUser.email; document.getElementById("testedBy").value = auth.currentUser.displayName; }
-            slnoInput.innerHTML = '<option value="">Select Quotation First</option>'; // Reset dropdown
+            slnoInput.innerHTML = '<option value="" disabled selected hidden>Select Quotation First</option>'; // Reset dropdown
         }
       }else{ throw new Error(res.message); }
     })
