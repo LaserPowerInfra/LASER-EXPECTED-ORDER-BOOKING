@@ -322,29 +322,35 @@ const handleFormSubmit = function(clearForm) {
 
   if (lastSubmittedJSON === currentJSON) { Swal.fire({ icon: 'warning', title: 'Duplicate Entry', text: 'Change at least one field before submitting again.', confirmButtonColor: '#d33' }); return; }
   
+  Toast.fire({ icon: 'success', title: 'Saved successfully' });
+  lastSubmittedJSON = currentJSON;
+  if (clearForm) {
+      entryForm.reset(); lastSubmittedJSON = ""; 
+      if(auth.currentUser){ document.getElementById("userEmail").value = auth.currentUser.email; document.getElementById("testedBy").value = auth.currentUser.displayName; }
+      slnoInput.innerHTML = '<option value="" disabled selected hidden>Select Quotation First</option>'; 
+  }
+
+  // === BACKGROUND FETCH ===
   btnSubmitExit.disabled = true; 
   const originalTextExit = btnSubmitExit.innerText; 
-  
-  btnSubmitExit.innerText = "Saving...";
+  btnSubmitExit.innerText = "Processing...";
 
   fetch(SCRIPT_URL,{ method:"POST", body:JSON.stringify(obj) })
     .then(r=>r.json())
     .then(res=>{
-      if(res.result==="success"){
-        Toast.fire({ icon: 'success', title: 'Saved successfully' });
-        lastSubmittedJSON = currentJSON;
-        if (clearForm) {
-            entryForm.reset(); lastSubmittedJSON = ""; 
-            if(auth.currentUser){ document.getElementById("userEmail").value = auth.currentUser.email; document.getElementById("testedBy").value = auth.currentUser.displayName; }
-            slnoInput.innerHTML = '<option value="" disabled selected hidden>Select Quotation First</option>'; 
-        }
-      }else{ throw new Error(res.message); }
+      if(res.result !== "success"){ 
+          Swal.fire("Server Warning", "Could not save to sheet: " + res.message, "warning"); 
+      }
     })
-    .catch(err=>Swal.fire("Error", "Failed: " + err, "error"))
-    .finally(()=>{ btnSubmitExit.disabled = false; btnSubmitExit.innerText = originalTextExit; });
+    .catch(err=>{
+        console.error("Network Error: ", err);
+    })
+    .finally(()=>{ 
+        btnSubmitExit.disabled = false; 
+        btnSubmitExit.innerText = originalTextExit; 
+    });
 };
 </script>
 
 </body>
 </html>
-
