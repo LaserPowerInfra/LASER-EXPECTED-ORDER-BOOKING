@@ -102,6 +102,9 @@ button.submit-btn { padding: 12px; color: #fff; border: none; border-radius: 6px
 
 /* Mobile Responsive */
 @media(max-width:600px){ .form-grid{grid-template-columns:1fr} }
+
+/* Refresh Button Hover */
+#refreshDataBtn:hover { opacity: 0.7; }
 </style>
 </head>
 <body>
@@ -128,7 +131,11 @@ button.submit-btn { padding: 12px; color: #fff; border: none; border-radius: 6px
     <input type="hidden" id="testedBy" name="testedBy">
     
     <div>
-        <label class="req">QUOTATION NO</label>
+        <label class="req" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>QUOTATION NO</span>
+            <span id="refreshDataBtn" style="color: #0d6efd; cursor: pointer; font-weight: bold; font-size: 11px;" title="Fetch latest data from sheet">🔄 Refresh Data</span>
+        </label>
+        
         <div class="combo" id="comboWrapper">
             <input id="quotationInput" name="quotation_no" placeholder="Select or type quotation..." autocomplete="off" required>
             <div id="quotationList" class="combo-list"></div>
@@ -203,6 +210,7 @@ const slnoInput = document.getElementById("slnoInput");
 const gridIdInput = document.getElementById("gridIdInput");
 const quotationList = document.getElementById("quotationList");
 const comboWrapper = document.getElementById("comboWrapper");
+const refreshDataBtn = document.getElementById("refreshDataBtn");
 
 let quotationData = [];
 let lastSubmittedJSON = "";
@@ -218,8 +226,14 @@ onAuthStateChanged(auth,user=>{
   }
 });
 
-function loadQuotationList(){
-  quotationInput.placeholder = "Loading quotation list...";
+function loadQuotationList(showToast = false){
+  quotationInput.placeholder = "Loading latest data...";
+  
+  if (showToast) {
+      quotationInput.value = "";
+      slnoInput.innerHTML = '<option value="" disabled selected hidden>Select Quotation First</option>';
+      gridIdInput.value = "";
+  }
 
   fetch(SCRIPT_URL + "?action=getCoilList")
     .then(r => r.json())
@@ -227,6 +241,10 @@ function loadQuotationList(){
       if (res.result !== "success" || !Array.isArray(res.data)) { throw new Error("Invalid response"); }
       quotationData = res.data;
       quotationInput.placeholder = "Select or type quotation...";
+      
+      if (showToast) {
+          Toast.fire({ icon: 'success', title: 'Data Refreshed Successfully!' });
+      }
     })
     .catch(err => {
       console.error(err);
@@ -234,6 +252,11 @@ function loadQuotationList(){
       Swal.fire("Server Error", "Unable to load QUOTATION list. Check network.", "error");
     });
 }
+
+// Refresh button event listener
+refreshDataBtn.addEventListener("click", () => {
+    loadQuotationList(true);
+});
 
 function populateSlnoDropdown(selectedQno) {
     slnoInput.innerHTML = '<option value="" disabled selected hidden>Select SL NO</option>';
@@ -322,15 +345,17 @@ const handleFormSubmit = function(clearForm) {
 
   if (lastSubmittedJSON === currentJSON) { Swal.fire({ icon: 'warning', title: 'Duplicate Entry', text: 'Change at least one field before submitting again.', confirmButtonColor: '#d33' }); return; }
   
+  // === INSTANT SUCCESS & REMOVAL FROM MEMORY ===
   Toast.fire({ icon: 'success', title: 'Saved successfully' });
   lastSubmittedJSON = currentJSON;
+  quotationData = quotationData.filter(item => 
+      !(String(item.quotation_no).trim() === enteredQuotation && String(item.slno).trim() === obj.slno)
+  );
   if (clearForm) {
       entryForm.reset(); lastSubmittedJSON = ""; 
       if(auth.currentUser){ document.getElementById("userEmail").value = auth.currentUser.email; document.getElementById("testedBy").value = auth.currentUser.displayName; }
       slnoInput.innerHTML = '<option value="" disabled selected hidden>Select Quotation First</option>'; 
   }
-
-  // === BACKGROUND FETCH ===
   btnSubmitExit.disabled = true; 
   const originalTextExit = btnSubmitExit.innerText; 
   btnSubmitExit.innerText = "Processing...";
@@ -340,15 +365,18 @@ const handleFormSubmit = function(clearForm) {
     .then(res=>{
       if(res.result !== "success"){ 
           Swal.fire("Server Warning", "Could not save to sheet: " + res.message, "warning"); 
+      } else {
+          fetch(SCRIPT_URL + "?action=getCoilList")
+            .then(r => r.json())
+            .then(freshRes => {
+              if (freshRes.result === "success" && Array.isArray(freshRes.data)) {
+                quotationData = freshRes.data;
+              }
+            }).catch(e => console.log("Silent update failed"));
       }
     })
-    .catch(err=>{
-        console.error("Network Error: ", err);
-    })
-    .finally(()=>{ 
-        btnSubmitExit.disabled = false; 
-        btnSubmitExit.innerText = originalTextExit; 
-    });
+    .catch(err=>{ console.error("Network Error: ", err); })
+    .finally(()=>{ btnSubmitExit.disabled = false; btnSubmitExit.innerText = originalTextExit; });
 };
 </script>
 
