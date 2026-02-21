@@ -130,7 +130,12 @@ button.submit-btn { padding: 12px; color: #fff; border: none; border-radius: 6px
         <div id="quotationList" class="combo-list"></div>
     </div>
 
-    <div><label class="req">SL NO (Auto)</label><input type="text" id="slnoInput" name="slno" readonly required></div>
+    <div>
+        <label class="req">SL NO</label>
+        <select id="slnoInput" name="slno" required>
+            <option value="">Select Quotation First</option>
+        </select>
+    </div>
     
     <div><label class="req">GRID ID (Auto)</label><input type="text" id="gridIdInput" name="grid_id" readonly required></div>
 
@@ -221,23 +226,47 @@ function loadQuotationList(){
     });
 }
 
+function populateSlnoDropdown(selectedQno) {
+    slnoInput.innerHTML = '<option value="">Select SL NO</option>';
+    gridIdInput.value = "";
+    
+    // Filter matching data
+    const matches = quotationData.filter(item => String(item.quotation_no).trim().toLowerCase() === selectedQno.toLowerCase());
+    
+    matches.forEach(m => {
+        const opt = document.createElement("option");
+        opt.value = m.slno;
+        opt.textContent = m.slno;
+        opt.dataset.grid = m.grid_id; // Store grid_id inside option
+        slnoInput.appendChild(opt);
+    });
+}
+
+// SL NO Dropdown Change listener to auto-fill GRID ID
+slnoInput.addEventListener("change", (e) => {
+    const selectedOption = e.target.options[e.target.selectedIndex];
+    gridIdInput.value = selectedOption.dataset.grid || "";
+});
+
 function showList(val = "") {
   quotationList.innerHTML = "";
   const fragment = document.createDocumentFragment();
   const valLower = val.toLowerCase();
   let count = 0; 
+  
+  // Extract unique quotations
+  const uniqueQuotations = [...new Set(quotationData.map(item => String(item.quotation_no).trim()))];
 
-  for (let i = 0; i < quotationData.length; i++) {
+  for (let i = 0; i < uniqueQuotations.length; i++) {
      if (count >= 100) break;
-     const qNo = String(quotationData[i].quotation_no || "");
+     const qNo = uniqueQuotations[i];
      if (qNo.toLowerCase().includes(valLower)) {
         const d = document.createElement("div");
         d.textContent = qNo;
         d.onmousedown = () => { 
             quotationInput.value = qNo;
-            slnoInput.value = quotationData[i].slno || "";
-            gridIdInput.value = quotationData[i].grid_id || "";
             quotationList.style.display = "none";
+            populateSlnoDropdown(qNo); // Populate SL NO on select
         };
         fragment.appendChild(d);
         count++;
@@ -248,10 +277,18 @@ function showList(val = "") {
 
 quotationInput.addEventListener("input", () => {
     showList(quotationInput.value);
-    slnoInput.value = ""; gridIdInput.value = "";
+    slnoInput.innerHTML = '<option value="">Select Quotation First</option>';
+    gridIdInput.value = ""; 
 });
-quotationInput.addEventListener("focus", () => showList(quotationInput.value));
-quotationInput.addEventListener("click", () => showList(quotationInput.value));
+
+quotationInput.addEventListener("focus", () => {
+    quotationInput.select();
+    showList(""); 
+});
+quotationInput.addEventListener("click", () => {
+    showList(""); 
+});
+
 quotationInput.addEventListener("keydown", (e) => { if (e.key === "Tab") quotationList.style.display = "none"; });
 document.addEventListener("click", e => { if (!comboWrapper.contains(e.target)) quotationList.style.display = "none"; });
 quotationInput.addEventListener("blur", () => { setTimeout(() => { quotationList.style.display = "none"; }, 200); });
@@ -294,6 +331,7 @@ const handleFormSubmit = function(clearForm) {
         if (clearForm) {
             entryForm.reset(); lastSubmittedJSON = ""; 
             if(auth.currentUser){ document.getElementById("userEmail").value = auth.currentUser.email; document.getElementById("testedBy").value = auth.currentUser.displayName; }
+            slnoInput.innerHTML = '<option value="">Select Quotation First</option>'; // Reset dropdown
         }
       }else{ throw new Error(res.message); }
     })
